@@ -15,7 +15,8 @@ class UsersSpider(Spider):
             yield response.follow(profile_url, callback=self.parse_profile)
         
         next_page_url = response.xpath('//div[@class="pagelink"]/a[@class="next"]/@href').get()
-        yield response.follow(next_page_url, callback=self.parse)
+        if next_page_url:
+            yield response.follow(next_page_url, callback=self.parse)
     
     def parse_profile(self, response: Response):
         query = urllib.parse.urlparse(response.url).query

@@ -1,8 +1,31 @@
 import urllib, os
 from scrapy import Item, Spider
-from .items import UserItem
+from scrapy.exceptions import DropItem
+from .items import UserItem, SectionItem, ForumItem, TopicItem, PostItem
 from pony import orm
 from pony.orm import db_session
+
+
+class UniqueIdPipeline(object):
+
+    def __init__(self):
+        self.items = dict() # item class => item ids list
+    
+    def process_item(self, item: Item, spider: Spider):
+        if 'id' not in item:
+            return item
+        
+        key = str(type(item))
+        id = int(item['id'][0] if type(item['id']) is list else item['id'])
+        
+        if key not in self.items:
+            self.items[key] = set()
+        
+        if id not in self.items[key]:
+            self.items[key].add(id)
+            return item
+        else:
+            raise DropItem()
 
 
 DB_FILENAME = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data.sqlite'))
@@ -20,10 +43,29 @@ class DBSavePipeline(object):
             avatar = orm.Optional(bytes)
             registration_date = orm.Required(str)
         
+        class Section(db.Entity):
+            id = orm.PrimaryKey(int)
+            title = orm.Required(str)
+            forums = orm.Set(lambda: Forum)
+        
+        class Forum(db.Entity):
+            id = orm.PrimaryKey(int)
+            title = orm.Required(str)
+            section = orm.Required(Section)
+            topics = orm.Set(lambda: Topic)
+        
+        class Topic(db.Entity):
+            id = orm.PrimaryKey(int)
+            title = orm.Required(str)
+            forum = orm.Required(Forum)
+        
         db.generate_mapping(create_tables=True)
         orm.set_sql_debug(True)
         
         self.User = User
+        self.Section = Section
+        self.Forum = Forum
+        self.Topic = Topic
         self._db = db
     
     @db_session
@@ -51,3 +93,25 @@ class DBSavePipeline(object):
                     name=item['name'][0],
                     registration_date=item['registration_date'][0])
                 orm.commit()
+        elif type(item) is SectionItem:
+            self.Section(
+                id=int(item['id']),
+                title=item['title']
+            )
+            orm.commit()
+        elif type(item) is ForumItem:
+            self.Forum(
+                id=int(item['id']),
+                title=item['title'],
+                section=int(item['section_id'])
+            )
+            orm.commit()
+        elif type(item) is TopicItem:
+            self.Topic(
+                id=int(item['id']),
+                title=item['title'],
+                forum=int(item['forum_id'])
+            )
+            orm.commit()
+        
+        return item

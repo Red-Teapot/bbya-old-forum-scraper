@@ -65,7 +65,8 @@ ROBOTSTXT_OBEY = False
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'bbya.pipelines.DBSavePipeline': 300,
+    'bbya.pipelines.UniqueIdPipeline': 100,
+    'bbya.pipelines.DBSavePipeline': 1000,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
