@@ -24,4 +24,8 @@ class TopicItem(Item):
 
 class PostItem(Item):
     id = Field()
-    # TODO
+    topic = Field()
+    number = Field()
+    date = Field()
+    author = Field()
+    text = Field()

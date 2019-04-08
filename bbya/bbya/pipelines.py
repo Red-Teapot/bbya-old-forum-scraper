@@ -42,6 +42,7 @@ class DBSavePipeline(object):
             avatar_url = orm.Optional(str)
             avatar = orm.Optional(bytes)
             registration_date = orm.Required(str)
+            posts = orm.Set(lambda: Post)
         
         class Section(db.Entity):
             id = orm.PrimaryKey(int)
@@ -58,6 +59,15 @@ class DBSavePipeline(object):
             id = orm.PrimaryKey(int)
             title = orm.Required(str)
             forum = orm.Required(Forum)
+            posts = orm.Set(lambda: Post)
+        
+        class Post(db.Entity):
+            id = orm.PrimaryKey(int)
+            topic = orm.Required(Topic)
+            number = orm.Required(int)
+            date = orm.Required(int)
+            author = orm.Required(User)
+            text = orm.Required(str)
         
         db.generate_mapping(create_tables=True)
         orm.set_sql_debug(True)
@@ -66,6 +76,7 @@ class DBSavePipeline(object):
         self.Section = Section
         self.Forum = Forum
         self.Topic = Topic
+        self.Post = Post
         self._db = db
     
     @db_session
@@ -111,6 +122,16 @@ class DBSavePipeline(object):
                 id=int(item['id']),
                 title=item['title'],
                 forum=int(item['forum_id'])
+            )
+            orm.commit()
+        elif type(item) is PostItem:
+            self.Post(
+                id=int(item['id']),
+                topic=int(item['topic']),
+                number=int(item['number']),
+                date=int(item['date']),
+                author=int(item['author']),
+                text=str(item['text'])
             )
             orm.commit()
         

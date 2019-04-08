@@ -61,4 +61,25 @@ class ForumsSpider(Spider):
 
         yield TopicItem(id=topic_id, title=topic_title, forum_id=forum_id)
 
-        self.logger.debug('Parsing topic %d %s from %d', topic_id, topic_title, forum_id)
+        for post in response.xpath('//div[@class="topic"]/div[contains(@class, "post")]'):
+            post_id = int(post.xpath('@id').get()[1:])
+            post_date = int(post.xpath('@data-posted').get())
+            post_number = int(post.xpath('h3/span/strong/text()').get())
+            post_author_link = post.xpath('div[@class="container"]/div[@class="post-author"]/ul/li[@class="pa-author"]/a/@href').get()
+            post_author_link_query = urllib.parse.urlparse(post_author_link).query
+            post_author = int(urllib.parse.parse_qs(post_author_link_query)['id'][0])
+            post_text_elements = post.xpath('div[@class="container"]/div[@class="post-body"]/div[@class="post-box"]/div[@class="post-content"]/*').getall()
+            post_text = ''.join(post_text_elements)
+            
+            yield PostItem(
+                id=post_id,
+                topic=topic_id,
+                number=post_number,
+                date=post_date,
+                author=post_author,
+                text=post_text
+            )
+        
+        next_page_url = response.xpath('//div[@class="pagelink"]/a[@class="next"]/@href').get()
+        if next_page_url:
+            yield response.follow(next_page_url, callback=self.parse_topic)
